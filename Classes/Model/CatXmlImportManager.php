@@ -25,8 +25,6 @@ namespace Localizationteam\L10nmgr\Model;
  ***************************************************************/
 
 use TYPO3\CMS\Core\Utility\GeneralUtility;
-use Localizationteam\L10nmgr\Model\TranslationData;
-use Localizationteam\L10nmgr\Model\Tools\XmlTools;
 
 /**
  * Function for managing the Import of CAT XML
@@ -287,6 +285,8 @@ class CatXmlImportManager
 
         //delete previous L10Ns
         $cmdCount = 0;
+        $dataHandler = GeneralUtility::makeInstance('TYPO3\CMS\Core\DataHandling\DataHandler');
+        $dataHandler->start(array(), array());
         foreach ($delL10NData as $element) {
             list($table, $elementUid) = explode(':', $element);
             if (isset($GLOBALS['TCA'][$table]['columns']['l10n_parent'])) {
@@ -299,7 +299,12 @@ class CatXmlImportManager
                 $table = 'pages_language_overlay';
                 $where = 'pid = ' . (int)$elementUid  . ' AND sys_language_uid = ' . (int)$this->headerData['t3_sysLang'] . ' AND t3ver_wsid = ' . (int)$this->headerData['t3_workspaceId'];
             }
-            $delDataQuery = $GLOBALS['TYPO3_DB']->exec_DELETEquery($table, $where);
+            $delDataQuery = $GLOBALS['TYPO3_DB']->exec_SELECTgetRows('uid', $table, $where, '', '', '', 'uid');
+            if(!empty($delDataQuery)) {
+                foreach($delDataQuery as $uid => $item) {
+                    $dataHandler->deleteAction($table, $uid);
+                }
+            }
             $cmdCount++;
         }
 
