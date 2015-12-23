@@ -269,6 +269,7 @@ class L10nBaseService
             /** @var $flexToolObj FlexFormTools */
             $flexToolObj = GeneralUtility::makeInstance(FlexFormTools::class);
             $gridElementsInstalled = ExtensionManagementUtility::isLoaded('gridelements');
+            $fluxInstalled = ExtensionManagementUtility::isLoaded('flux');
             $TCEmain_data = array();
             $TCEmain_cmd = array();
 
@@ -294,31 +295,37 @@ class L10nBaseService
 
                                     // If new element is required, we prepare for localization
                                     if ($Tuid === 'NEW') {
-                                        if ($table === 'tt_content' && $gridElementsInstalled === true) {
+                                        if ($table === 'tt_content' && ($gridElementsInstalled === true ||  $fluxInstalled === true)) {
                                             $element = BackendUtility::getRecordRaw($table,
-                                                'uid = ' . (int)$elementUid . ' AND deleted = 0');
-                                            if ($element['colPos'] > -1) {
-	                                            if (isset($TCEmain_cmd['tt_content'][$elementUid])) {
-		                                            unset($TCEmain_cmd['tt_content'][$elementUid]);
-	                                            }
+                                                    'uid = ' . (int)$elementUid . ' AND deleted = 0');
+                                            if (isset($TCEmain_cmd['tt_content'][$elementUid])) {
+                                                unset($TCEmain_cmd['tt_content'][$elementUid]);
+                                            }
+                                            if ((int)$element['colPos'] > -1 && (int)$element['colPos'] !== 18181) {
                                                 $TCEmain_cmd['tt_content'][$elementUid]['localize'] = $Tlang;
                                             } else {
                                                 if ($element['tx_gridelements_container'] > 0) {
-                                                    //TYPO3\CMS\Core\Utility\DebugUtility::debug($element,'$element');
                                                     $container = BackendUtility::getRecordRaw('tt_content',
-	                                                    $TCA['tt_content']['ctrl']['transOrigPointerField'] . ' = ' . (int)$element['tx_gridelements_container'] . '
+                                                            $TCA['tt_content']['ctrl']['transOrigPointerField'] . ' = ' . (int)$element['tx_gridelements_container'] . '
 	                                                    AND deleted = 0 AND sys_language_uid = ' . (int)$Tlang
                                                     );
                                                     if ($container['uid'] > 0) {
-	                                                    if (isset($TCEmain_cmd['tt_content'][$elementUid])) {
-		                                                    unset($TCEmain_cmd['tt_content'][$elementUid]);
-	                                                    }
                                                         $TCEmain_cmd['tt_content'][$container['uid']]['inlineLocalizeSynchronize'] = 'tx_gridelements_children,localize';
+                                                    }
+                                                }
+                                                if ($element['tx_flux_parent'] > 0) {
+                                                    $parent = BackendUtility::getRecordRaw('tt_content',
+                                                            $TCA['tt_content']['ctrl']['transOrigPointerField'] . ' = ' . (int)$element['tx_flux_parent'] . '
+	                                                    AND deleted = 0 AND sys_language_uid = ' . (int)$Tlang
+                                                    );
+                                                    if ($parent['uid'] > 0) {
+                                                        $TCEmain_cmd['tt_content'][$parent['uid']]['inlineLocalizeSynchronize'] = 'tx_flux_children,localize';
                                                     }
                                                 }
                                             }
                                         } elseif ($table === 'sys_file_reference') {
-	                                        $element = BackendUtility::getRecordRaw($table,
+
+                                            $element = BackendUtility::getRecordRaw($table,
 		                                        'uid = ' . (int)$elementUid . ' AND deleted = 0');
 	                                        if ($element['uid_foreign'] && $element['tablenames'] && $element['fieldname']) {
 		                                        if ($element['tablenames'] === 'pages') {
